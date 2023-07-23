@@ -68,15 +68,13 @@
       <artifactId>org.eclipse.persistence.moxy</artifactId>
       <version>3.0.2</version>
     </dependency>
-
-    <!-- Jakarta XML Binding (JAXB) - jakarta.xml.bind-api -->
     <dependency>
-      <groupId>jakarta.xml.bind</groupId>
-      <artifactId>jakarta.xml.bind-api</artifactId>
-      <version>3.0.0</version>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+      <version>3.0.2</version>
     </dependency>
 
-    <!-- JAXB API -->
+    <!-- JAXB API - Use a version compatible with Java 11 or later -->
     <dependency>
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>

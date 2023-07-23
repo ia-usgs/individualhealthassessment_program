@@ -5,13 +5,15 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
 import java.io.File;
+
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 public class healthController {
     @FXML
@@ -31,6 +33,10 @@ public class healthController {
     @FXML
     private Button analyzeButton;
     @FXML
+    private Button saveButton;
+    @FXML
+    private TextField filepathField;
+    @FXML
     private Pane rootPane;
 
     private BloodPressureChecker bloodPressureChecker;
@@ -48,6 +54,7 @@ public class healthController {
         triglyceridesChecker = new TriglyceridesChecker();
 
         analyzeButton.setOnAction(e -> analyzeInputValues());
+        saveButton.setOnAction(e -> saveHealthReport());
     }
 
     private void analyzeInputValues() {
@@ -57,49 +64,83 @@ public class healthController {
         String cholesterol = textField4.getText();
         String triglycerides = textField5.getText();
 
-        // Perform range checks and show notifications if values are out of bounds
-        String notification = "Health Assessment Results:\n";
-
         // Blood Pressure Range Check
         String bloodPressureResult = bloodPressureChecker.checkBloodPressure(Double.parseDouble(bloodPressure));
-        notification += "Blood Pressure: " + bloodPressureResult + "\n";
-        if (bloodPressureResult.equals("Very severe")) {
-            showWarningNotification("Blood Pressure");
-        }
 
         // BMI Range Check
         String bmiResult = bmiCalculator.checkBMI(Double.parseDouble(bmi));
-        notification += "BMI: " + bmiResult + "\n";
-        if (bmiResult.equals("Underweight") || bmiResult.equals("Obese")) {
-            showWarningNotification("BMI");
-        }
 
         // Blood Glucose Range Check
         String bloodGlucoseResult = bloodGlucoseChecker.checkBloodGlucose(Double.parseDouble(bloodGlucose));
-        notification += "Blood Glucose: " + bloodGlucoseResult + "\n";
-        if (bloodGlucoseResult.equals("Out of control") || bloodGlucoseResult.equals("Poor")) {
-            showWarningNotification("Blood Glucose");
-        }
 
         // Cholesterol Range Check
         String cholesterolResult = cholesterolChecker.checkCholesterol(cholesterol);
-        notification += "Cholesterol: " + cholesterolResult + "\n";
-        if (cholesterolResult.equals("Not Optimal")) {
-            showWarningNotification("Cholesterol");
-        }
 
         // Triglycerides Range Check
         String triglyceridesResult = triglyceridesChecker.checkTriglycerides(Double.parseDouble(triglycerides));
+
+        // Display health assessment results in the text area
+        String notification = "Health Assessment Results:\n";
+        notification += "Blood Pressure: " + bloodPressureResult + "\n";
+        notification += "BMI: " + bmiResult + "\n";
+        notification += "Blood Glucose: " + bloodGlucoseResult + "\n";
+        notification += "Cholesterol: " + cholesterolResult + "\n";
         notification += "Triglycerides: " + triglyceridesResult;
-        if (triglyceridesResult.equals("Optimal")) {
-            showWarningNotification("Triglycerides");
-        }
 
         textArea.setText(notification);
 
-        // Save the health assessment report to an XML file
-        saveHealthReport();
+        // Show warning notification for out-of-range values
+        if (bloodPressureResult.equals("Very severe")) {
+            showWarningNotification("Blood Pressure");
+        }
+        if (bmiResult.equals("Underweight") || bmiResult.equals("Obese")) {
+            showWarningNotification("BMI");
+        }
+        if (bloodGlucoseResult.equals("Out of control") || bloodGlucoseResult.equals("Poor")) {
+            showWarningNotification("Blood Glucose");
+        }
+        if (cholesterolResult.equals("Not Optimal")) {
+            showWarningNotification("Cholesterol");
+        }
+        if (triglyceridesResult.equals("Optimal")) {
+            showWarningNotification("Triglycerides");
+        }
     }
+
+    private void saveHealthReport() {
+        String filePath = filepathField.getText().trim();
+        if (!filePath.isEmpty()) {
+            HealthReport healthReport = new HealthReport();
+            healthReport.setBloodPressure(textField1.getText());
+            healthReport.setBmi(textField2.getText());
+            healthReport.setBloodGlucose(textField3.getText());
+            healthReport.setCholesterol(textField4.getText());
+            healthReport.setTriglycerides(textField5.getText());
+
+            saveHealthReportToXml(healthReport, filePath);
+        }
+    }
+
+    public void saveHealthReportToXml(HealthReport report, String filePath) {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Save Health Report");
+            fileChooser.setInitialFileName("HealthReport.xml");
+
+            // Choose a directory where the XML file will be saved
+            File selectedFile = fileChooser.showSaveDialog(new Stage());
+
+            if (selectedFile != null) {
+                JAXBContext context = JAXBContext.newInstance(HealthReport.class);
+                Marshaller marshaller = context.createMarshaller();
+                marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+                marshaller.marshal(report, selectedFile);
+            }
+        } catch (JAXBException ex) {
+            ex.printStackTrace();
+        }
+    }
+
 
     private void showWarningNotification(String parameter) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
@@ -107,33 +148,6 @@ public class healthController {
         alert.setHeaderText(null);
         alert.setContentText("The " + parameter + " reading is far out of bounds.\nPlease see a doctor or consult a health professional.");
         alert.showAndWait();
-    }
-
-    private void saveHealthReport() {
-        HealthReport healthReport = new HealthReport();
-
-        // Create ParameterResult objects and add them to the health report
-        healthReport.addParameterResult(new ParameterResult("Blood Pressure", bloodPressureChecker.checkBloodPressure(Double.parseDouble(textField1.getText()))));
-        healthReport.addParameterResult(new ParameterResult("BMI", bmiCalculator.checkBMI(Double.parseDouble(textField2.getText()))));
-        healthReport.addParameterResult(new ParameterResult("Blood Glucose", bloodGlucoseChecker.checkBloodGlucose(Double.parseDouble(textField3.getText()))));
-        healthReport.addParameterResult(new ParameterResult("Cholesterol", cholesterolChecker.checkCholesterol(textField4.getText())));
-        healthReport.addParameterResult(new ParameterResult("Triglycerides", triglyceridesChecker.checkTriglycerides(Double.parseDouble(textField5.getText()))));
-
-        // Save the health report to an XML file
-        try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(HealthReport.class);
-            Marshaller marshaller = jaxbContext.createMarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-
-            // Save the XML file to disk
-            File outputFile = new File("health_report.xml");
-            marshaller.marshal(healthReport, outputFile);
-
-            showSaveSuccessNotification(outputFile.getAbsolutePath());
-        } catch (JAXBException e) {
-            e.printStackTrace();
-            showSaveErrorNotification();
-        }
     }
 
     private void showSaveSuccessNotification(String filePath) {
