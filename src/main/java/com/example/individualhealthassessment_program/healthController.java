@@ -6,14 +6,16 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
-
-import java.io.File;
-
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Marshaller;
-import javafx.stage.FileChooser;
-import javafx.stage.Stage;
+import jakarta.xml.bind.Unmarshaller;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 
 public class healthController {
     @FXML
@@ -45,6 +47,8 @@ public class healthController {
     private CholesterolChecker cholesterolChecker;
     private TriglyceridesChecker triglyceridesChecker;
 
+    private HealthReport healthReport;
+
     @FXML
     protected void initialize() {
         bloodPressureChecker = new BloodPressureChecker();
@@ -55,6 +59,7 @@ public class healthController {
 
         analyzeButton.setOnAction(e -> analyzeInputValues());
         saveButton.setOnAction(e -> saveHealthReport());
+        openButton.setOnAction(e -> loadHealthReport());
     }
 
     private void analyzeInputValues() {
@@ -64,22 +69,13 @@ public class healthController {
         String cholesterol = textField4.getText();
         String triglycerides = textField5.getText();
 
-        // Blood Pressure Range Check
+        //This is where the checks happen
         String bloodPressureResult = bloodPressureChecker.checkBloodPressure(Double.parseDouble(bloodPressure));
-
-        // BMI Range Check
         String bmiResult = bmiCalculator.checkBMI(Double.parseDouble(bmi));
-
-        // Blood Glucose Range Check
         String bloodGlucoseResult = bloodGlucoseChecker.checkBloodGlucose(Double.parseDouble(bloodGlucose));
-
-        // Cholesterol Range Check
         String cholesterolResult = cholesterolChecker.checkCholesterol(cholesterol);
-
-        // Triglycerides Range Check
         String triglyceridesResult = triglyceridesChecker.checkTriglycerides(Double.parseDouble(triglycerides));
 
-        // Display health assessment results in the text area
         String notification = "Health Assessment Results:\n";
         notification += "Blood Pressure: " + bloodPressureResult + "\n";
         notification += "BMI: " + bmiResult + "\n";
@@ -89,7 +85,6 @@ public class healthController {
 
         textArea.setText(notification);
 
-        // Show warning notification for out-of-range values
         if (bloodPressureResult.equals("Very severe")) {
             showWarningNotification("Blood Pressure");
         }
@@ -118,6 +113,36 @@ public class healthController {
             healthReport.setTriglycerides(textField5.getText());
 
             saveHealthReportToXml(healthReport, filePath);
+        } else {
+            showSaveErrorNotification("Please provide a valid file path!");
+        }
+    }
+
+    public void loadHealthReport() {
+        String filePath = filepathField.getText().trim();
+        if (!filePath.isEmpty()) {
+            try {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    JAXBContext context = JAXBContext.newInstance(HealthReport.class);
+                    Unmarshaller unmarshaller = context.createUnmarshaller();
+                    HealthReport report = (HealthReport) unmarshaller.unmarshal(file);
+
+                    textField1.setText(report.getBloodPressure());
+                    textField2.setText(report.getBmi());
+                    textField3.setText(report.getBloodGlucose());
+                    textField4.setText(report.getCholesterol());
+                    textField5.setText(report.getTriglycerides());
+
+                    showLoadSuccessNotification(filePath);
+                } else {
+                    showLoadErrorNotification("File does not exist!");
+                }
+            } catch (JAXBException e) {
+                showLoadErrorNotification("Error loading the file!");
+            }
+        } else {
+            showLoadErrorNotification("Please provide a valid file path!");
         }
     }
 
@@ -127,20 +152,20 @@ public class healthController {
             fileChooser.setTitle("Save Health Report");
             fileChooser.setInitialFileName("HealthReport.xml");
 
-            // Choose a directory where the XML file will be saved
-            File selectedFile = fileChooser.showSaveDialog(new Stage());
+            File selectedFile = fileChooser.showSaveDialog(new Stage()); //allows you to type a file path and save
 
             if (selectedFile != null) {
                 JAXBContext context = JAXBContext.newInstance(HealthReport.class);
                 Marshaller marshaller = context.createMarshaller();
                 marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
                 marshaller.marshal(report, selectedFile);
+
+                showSaveSuccessNotification(selectedFile.getAbsolutePath());
             }
         } catch (JAXBException ex) {
-            ex.printStackTrace();
+            showSaveErrorNotification("An error occurred while saving the health assessment report.");
         }
     }
-
 
     private void showWarningNotification(String parameter) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
@@ -158,11 +183,27 @@ public class healthController {
         alert.showAndWait();
     }
 
-    private void showSaveErrorNotification() {
+    private void showSaveErrorNotification(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Save Error");
         alert.setHeaderText(null);
-        alert.setContentText("An error occurred while saving the health assessment report.");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showLoadSuccessNotification(String filePath) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Health Report Loaded");
+        alert.setHeaderText(null);
+        alert.setContentText("The health assessment report has been loaded successfully.\nFile location: " + filePath);
+        alert.showAndWait();
+    }
+
+    private void showLoadErrorNotification(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Load Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }

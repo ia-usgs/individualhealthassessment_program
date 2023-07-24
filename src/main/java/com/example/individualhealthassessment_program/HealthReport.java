@@ -12,7 +12,6 @@ public class HealthReport {
     private String triglycerides;
 
     public HealthReport() {
-        // Required default constructor for JAXB
     }
 
     @XmlElement
